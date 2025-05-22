@@ -33,10 +33,10 @@ public extension ServiceLocator {
 
 public class CoreServiceLocator {
     /// Stored object instance factories.
-    private var services = [String: Register]()
+    private var services = [ObjectIdentifier: Register]()
 
     /// Stored unique object instances.
-    private var uniqueInstances = [String: Any]()
+    private var uniqueInstances = [ObjectIdentifier: Any]()
 
     fileprivate init() {}
     deinit { services.removeAll() }
@@ -49,14 +49,14 @@ extension CoreServiceLocator {
     /// Registers a specific type and its instantiating factory.
     public func add(@Factory _ module: () -> Register) {
         let module = module()
-        services[module.name] = module
+        services[module.key] = module
     }
 
     /// Register factories
     /// - Parameter modules: The factories added
     public func add(@Factory _ modules: () -> [Register]) {
         modules().forEach {
-            services[$0.name] = $0
+            services[$0.key] = $0
         }
     }
 
@@ -65,7 +65,7 @@ extension CoreServiceLocator {
     public func addBuildTasks(_ buildTasks: () -> [ServiceProvider]) {
         buildTasks().forEach { (task) in
             task.modules().forEach {
-                services[$0.name] = $0
+                services[$0.key] = $0
             }
         }
     }
@@ -81,18 +81,18 @@ extension CoreServiceLocator {
     /// - If the dependency is not found, an exception will occur.
     ///
     public func module<T>(for type: T.Type = T.self) -> T {
-        let name = String(describing: T.self)
-        guard let service = services[name] else {
+        let key = ObjectIdentifier(T.self)
+        guard let service = services[key] else {
             fatalError("Dependency '\(T.self)' not resolved!")
         }
 
         switch service.storagePolicy {
         case .unique:
-            if let uniqueInstance = uniqueInstances[name] as? T {
+            if let uniqueInstance = uniqueInstances[key] as? T {
                 return uniqueInstance
             } else {
                 let instance = service.resolve()
-                uniqueInstances[name] = instance
+                uniqueInstances[key] = instance
                 return instance as! T
             }
         case .new:
@@ -137,12 +137,12 @@ public enum StoragePolicy {
 ///
 
 public struct Register {
-    fileprivate let name: String
+    fileprivate let key: ObjectIdentifier
     fileprivate let storagePolicy: StoragePolicy
     fileprivate let resolve: () -> Any
 
     public init<T>(_ type: T.Type = T.self, _ storagePolicy: StoragePolicy = .new, _ resolve: @escaping () -> T) {
-        self.name = String(describing: T.self)
+        self.key = ObjectIdentifier(type)
         self.storagePolicy = storagePolicy
         self.resolve = resolve
     }
