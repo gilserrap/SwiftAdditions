@@ -142,7 +142,7 @@ public struct Register {
     fileprivate let resolve: () -> Any
 
     public init<T>(_ type: T.Type = T.self, _ storagePolicy: StoragePolicy = .new, _ resolve: @escaping () -> T) {
-        self.key = ObjectIdentifier(type)
+        self.key = ObjectIdentifier(type.self)
         self.storagePolicy = storagePolicy
         self.resolve = resolve
     }
